@@ -9,11 +9,14 @@ class Retrieve:
         self.index = index
         self.term_weighting = term_weighting
         self.num_docs = self.number_of_docs()
+        self.biggest_tf = 0
+        self.smoothing_term = 0.4
 
         if (term_weighting == 'tfidf'):
             self.weights = self.docs_tfidfs()
         elif (term_weighting == 'tf'):
-            self.weights = self.docs_tfs()
+            self.docs_tfs()
+            self.weights = self.maximumTfNorm()
         else:
             self.weights = self.docs_binary()
         self.vectors = self.docs_vectors_len()
@@ -42,11 +45,22 @@ class Retrieve:
             for doc in self.index[term]:
                 if doc not in tfDict:
                     tfDict[doc] = {}
-                if self.index[term][doc] > 0:
-                    tfDict[doc][term] = 1 + (math.log10(self.index[term][doc]))
-                else: 
-                    tfDict[doc][term] = 0
+                tf = self.index[term][doc]
+                tfDict[doc][term] =  tf
+
+                if tf > self.biggest_tf:
+                    self.biggest_tf = tf
+                
         return tfDict
+
+    def maximumTfNorm(self):
+        tfNormDict = {} # tf dict
+        for term in self.index:
+            for doc in self.index[term]:
+                if doc not in tfNormDict:
+                    tfNormDict[doc] = {}
+                tfNormDict[doc][term] = self.smoothing_term + (1- self.smoothing_term) * (self.index[term][doc]/self.biggest_tf)
+        return tfNormDict
 
     # Compute documents tfidfs for each term
     def docs_tfidfs(self):
@@ -103,8 +117,7 @@ class Retrieve:
 
     def logTfweight(self, tf):
         for term in tf:
-            if tf[term] > 0:
-                tf[term] = 1 + (math.log10(tf[term]))
+            tf[term] = self.smoothing_term + (1- self.smoothing_term) * (tf[term]/self.biggest_tf)
         return tf
 
     # Compute query tfidf
@@ -143,12 +156,13 @@ class Retrieve:
     # represented as a list of preprocessed terms). Returns list 
     # of doc ids for relevant docs (in rank order).
     def for_query(self, query):
+
         relevantDocsIDs = self.relevant_docs_tf(query)
 
         if self.term_weighting == 'tfidf':
             weightsQ = self.query_tfidf(query) # compute query tfidf weights
         elif self.term_weighting == 'tf':
-            weightsQ = self.query_tf(query) # compute query term freq weights
+            weightsQ = self.logTfweight(self.query_tf(query)) # compute query term freq weights
         else:
             weightsQ = self.query_binary(query) # compute query binary weights
         
