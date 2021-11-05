@@ -93,8 +93,6 @@ class Retrieve:
                 tf[term] = 1
 
         return tf
-        
-        # comment
 
     # Compute query tfidf
     def query_tfidf(self, query):
@@ -115,6 +113,7 @@ class Retrieve:
         vecLen = np.linalg.norm(wordVec)
         return vecLen
 
+    # Compute cosine similarity
     def computing_cosine(self, tfidfQ, tfidfD):
         cosines = {}
         for doc in tfidfD:
@@ -130,17 +129,26 @@ class Retrieve:
     # represented as a list of preprocessed terms). Returns list 
     # of doc ids for relevant docs (in rank order).
     def for_query(self, query):
-        self.query_tf(query)
-        tfdifQ = self.query_tfidf(query)
-        self.query_vector(tfdifQ)
-        documents, xd = self.relevant_docs_tf(query)
-        # if query[0] == 'what' and query[1] == 'articles':
-        cosines = self.computing_cosine(tfdifQ, self.tfidfs)
-        # print(cosines)
-        print(query)
-        max_key = max(cosines, key=cosines.get)
-        print(max_key)
+        self.query_tf(query) # compute query term freq
+        tfdifQ = self.query_tfidf(query) # compute query tfidf
+        self.query_vector(tfdifQ) # compute query vector length
 
-        return list()
+        if self.term_weighting == 'tfidf':
+            cosines = self.computing_cosine(tfdifQ, self.tfidfs)
+            cosines = dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
+            dict_items = cosines.items()
+        elif self.term_weighting == 'tf':
+            dict_items = []
+        else:
+            dict_items = []
+
+        chosen = list(dict_items)[:10] # get 10 best scoring
+
+        finalList = []
+        for tuple in chosen: #convert to a list
+            finalList.append(tuple[0])
+            
+
+        return finalList
 
 
