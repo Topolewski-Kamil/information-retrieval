@@ -101,6 +101,7 @@ class Retrieve:
                 tf[term] = 1
         return tf
 
+    # Compute log weight of query
     def logTfweight(self, tf):
         for term in tf:
             if tf[term] > 0:
@@ -162,5 +163,3 @@ class Retrieve:
             chosenDocuments.append(tuple[0])
             
         return chosenDocuments
-
-
