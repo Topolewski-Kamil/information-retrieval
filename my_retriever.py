@@ -38,12 +38,14 @@ class Retrieve:
     # Compute documents term frequencies for each term
     def docs_tfs(self):
         tfDict = {} # tf dict
-       
         for term in self.index:
             for doc in self.index[term]:
                 if doc not in tfDict:
                     tfDict[doc] = {}
-                tfDict[doc][term] = self.index[term][doc]
+                if self.index[term][doc] > 0:
+                    tfDict[doc][term] = 1 + (math.log10(self.index[term][doc]))
+                else: 
+                    tfDict[doc][term] = 0
         return tfDict
 
     # Compute documents tfidfs for each term
@@ -69,16 +71,6 @@ class Retrieve:
             vecLen = np.linalg.norm(wordVec)
             vectors[doc] = vecLen
         return vectors
-    
-    # Convert a query to a representation of dictionary of term counts
-    def to_term_count(self, query):
-        termDic = {}
-        for word in query:
-            if word not in termDic:
-                termDic[word] = 1
-            else:
-                termDic[word] += 1
-        return termDic
         
     # Find all documents with at least one word match in a query
     # and construct tf weight dict
@@ -109,9 +101,15 @@ class Retrieve:
                 tf[term] = 1
         return tf
 
+    def logTfweight(self, tf):
+        for term in tf:
+            if tf[term] > 0:
+                tf[term] = 1 + (math.log10(tf[term]))
+        return tf
+
     # Compute query tfidf
     def query_tfidf(self, query):
-        query_terms = self.to_term_count(query)
+        query_terms = self.query_tf(query)
         tfidf = {}
         for term in query:
             if self.index.get(term) != None:
