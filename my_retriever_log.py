@@ -58,6 +58,8 @@ class Retrieve:
                 if doc not in tfidfsDict:
                     tfidfsDict[doc] = {}
                 tf = self.index[term][doc]
+                if tf != 0:
+                    tf = 1 + (math.log10(tf))
                 tfidfsDict[doc][term] = tf * idf
         return tfidfsDict
     
@@ -115,8 +117,11 @@ class Retrieve:
             if self.index.get(term) != None:
                 count = len(self.index.get(term))
                 idf = (math.log10(self.num_docs / count))
-                tfidf[term] = idf * query_terms[term]
-        return tfidf  
+                tf = query_terms[term]
+                if tf != 0:
+                    tf = 1 + (math.log10(tf))
+                tfidf[term] = idf * tf
+        return tfidf    
 
     # Compute query vector length
     def query_vector(self, tfdif):
