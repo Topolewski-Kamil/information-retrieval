@@ -1,7 +1,5 @@
 import math
-import re
 import numpy as np
-import copy
 
 class Retrieve:
     
@@ -11,10 +9,14 @@ class Retrieve:
         self.index = index
         self.term_weighting = term_weighting
         self.num_docs = self.number_of_docs()
-        self.tfidfs = self.docs_tfidfs()
-        self.tfs = self.docs_tfs()
+
+        if (term_weighting == 'tfidf'):
+            self.weights = self.docs_tfidfs()
+        elif (term_weighting == 'tf'):
+            self.weights = self.docs_tfs()
+        else:
+            self.weights = self.docs_binary()
         self.vectors = self.docs_vectors_len()
-        self.bins = self.docs_binary()
     
     # Compute number of documents
     def number_of_docs(self):
@@ -60,10 +62,10 @@ class Retrieve:
     # Compute documents length of vectors
     def docs_vectors_len(self):
         vectors = {}
-        for doc in self.tfidfs:
+        for doc in self.weights:
             wordVec = np.array([])
-            for term in self.tfidfs[doc]:
-                wordVec = np.append(wordVec,self.tfidfs[doc][term])              
+            for term in self.weights[doc]:
+                wordVec = np.append(wordVec,self.weights[doc][term])              
             vecLen = np.linalg.norm(wordVec)
             vectors[doc] = vecLen
         return vectors
@@ -143,23 +145,17 @@ class Retrieve:
     # represented as a list of preprocessed terms). Returns list 
     # of doc ids for relevant docs (in rank order).
     def for_query(self, query):
-
         relevantDocsIDs = self.relevant_docs_tf(query)
 
         if self.term_weighting == 'tfidf':
-            tfdifQ = self.query_tfidf(query) # compute query tfidf
-            self.query_vector(tfdifQ) # compute query vector length
-            cosines = self.computing_cosine(tfdifQ, self.tfidfs, relevantDocsIDs)
+            weightsQ = self.query_tfidf(query) # compute query tfidf weights
         elif self.term_weighting == 'tf':
-            tfQ = self.query_tf(query) # compute query term freq
-            cosines = self.computing_cosine(tfQ, self.tfs, relevantDocsIDs)
+            weightsQ = self.query_tf(query) # compute query term freq weights
         else:
-            binsQ = self.query_binary(query) # compute query binary weights
-            # print(binsQ)
-            cosines = self.computing_cosine(binsQ, self.bins, relevantDocsIDs)
-           
-
-        cosines = dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
+            weightsQ = self.query_binary(query) # compute query binary weights
+        
+        cosines = self.computing_cosine(weightsQ, self.weights, relevantDocsIDs)
+        cosines = dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True)) # descending order
         cosines_items = cosines.items()
         top10cosines = list(cosines_items)[:10] # get 10 best scoring
 
