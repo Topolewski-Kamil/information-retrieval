@@ -116,11 +116,15 @@ class Retrieve:
         return vecLen
 
     def computing_cosine(self, tfidfQ, tfidfD):
+        cosines = {}
         for doc in tfidfD:
+            cosines[doc] = {}
+            product = 0
             for term in tfidfQ:
-                print(term)
-
-        return 1
+                if term in tfidfD[doc]:
+                    product += tfidfQ[term] * tfidfD[doc][term]
+            cosines[doc] = product / self.vectors[doc]
+        return cosines
 
     # Method performing retrieval for a single query (which is 
     # represented as a list of preprocessed terms). Returns list 
@@ -129,11 +133,14 @@ class Retrieve:
         self.query_tf(query)
         tfdifQ = self.query_tfidf(query)
         self.query_vector(tfdifQ)
-        self.computing_cosine(tfdifQ, self.tfidfs)
-
+        documents, xd = self.relevant_docs_tf(query)
         # if query[0] == 'what' and query[1] == 'articles':
-        #     print(self.query_tf(query))      
-        
+        cosines = self.computing_cosine(tfdifQ, self.tfidfs)
+        # print(cosines)
+        print(query)
+        max_key = max(cosines, key=cosines.get)
+        print(max_key)
+
         return list()
 
 
