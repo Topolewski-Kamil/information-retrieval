@@ -1,6 +1,7 @@
 import math
 import re
 import numpy as np
+import copy
 
 class Retrieve:
     
@@ -13,14 +14,24 @@ class Retrieve:
         self.tfidfs = self.docs_tfidfs()
         self.tfs = self.docs_tfs()
         self.vectors = self.docs_vectors_len()
-        self.bins = self.docs_bins()
+        self.bins = self.docs_binary()
     
-    # Computer number of documents
+    # Compute number of documents
     def number_of_docs(self):
         self.doc_ids = set()
         for term in self.index:
             self.doc_ids.update(self.index[term])
         return len(self.doc_ids)
+
+    # Compute documents binary weighting for each term
+    def docs_binary(self):
+        binDict = {} # tf dict
+        for term in self.index:
+            for doc in self.index[term]:
+                if doc not in binDict:
+                    binDict[doc] = {}
+                binDict[doc][term] = 1
+        return binDict
 
     # Compute documents term frequencies for each term
     def docs_tfs(self):
@@ -32,16 +43,6 @@ class Retrieve:
                     tfDict[doc] = {}
                 tfDict[doc][term] = self.index[term][doc]
         return tfDict
-
-    # Compute documents binary weighting for each term
-    def docs_bins(self):
-        binDict = {} # tf dict
-        for term in self.index:
-            for doc in self.index[term]:
-                if doc not in binDict:
-                    binDict[doc] = {}
-                binDict[doc][term] = 1
-        return binDict
 
     # Compute documents tfidfs for each term
     def docs_tfidfs(self):
@@ -80,22 +81,16 @@ class Retrieve:
     # Find all documents with at least one word match in a query
     # and construct tf weight dict
     def relevant_docs_tf(self, query):
-        documents = set() # relvant docs 
-        tfDict = {} # tf dict
-       
+        documents = set() # relvant docs        
         for word in query:
             docIDs = self.index.get(word) # ids of all docs containg the word
             if docIDs != None:
                 for docID in docIDs:
-                    if docID not in tfDict:
-                        tfDict[docID] = {}
-                    tfDict[docID][word] = self.index[word][docID] 
-
                     documents.add(docID)        
-        return documents, tfDict
+        return documents
 
     # Compute query term frequency
-    def query_bin(self, query):
+    def query_binary(self, query):
         tf = {}
         for term in query:
             if term not in tf:
@@ -110,7 +105,6 @@ class Retrieve:
                 tf[term] += 1
             else:
                 tf[term] = 1
-
         return tf
 
     # Compute query tfidf
@@ -133,15 +127,16 @@ class Retrieve:
         return vecLen
 
     # Compute cosine similarity
-    def computing_cosine(self, tfidfQ, tfidfD):
+    def computing_cosine(self, tfidfQ, tfidfD, relevantDocs):
         cosines = {}
         for doc in tfidfD:
-            cosines[doc] = {}
-            product = 0
-            for term in tfidfQ:
-                if term in tfidfD[doc]:
-                    product += tfidfQ[term] * tfidfD[doc][term]
-            cosines[doc] = product / self.vectors[doc]
+            if doc in relevantDocs:
+                cosines[doc] = {}
+                product = 0
+                for term in tfidfQ:
+                    if term in tfidfD[doc]:
+                        product += tfidfQ[term] * tfidfD[doc][term]
+                cosines[doc] = product / self.vectors[doc]
         return cosines
 
     # Method performing retrieval for a single query (which is 
@@ -149,28 +144,29 @@ class Retrieve:
     # of doc ids for relevant docs (in rank order).
     def for_query(self, query):
 
+        relevantDocsIDs = self.relevant_docs_tf(query)
+
         if self.term_weighting == 'tfidf':
             tfdifQ = self.query_tfidf(query) # compute query tfidf
             self.query_vector(tfdifQ) # compute query vector length
-            cosines = self.computing_cosine(tfdifQ, self.tfidfs)
+            cosines = self.computing_cosine(tfdifQ, self.tfidfs, relevantDocsIDs)
         elif self.term_weighting == 'tf':
             tfQ = self.query_tf(query) # compute query term freq
-            cosines = self.computing_cosine(tfQ, self.tfs)
+            cosines = self.computing_cosine(tfQ, self.tfs, relevantDocsIDs)
         else:
-            binsQ = self.query_bin(query) # compute query binary weights
+            binsQ = self.query_binary(query) # compute query binary weights
             # print(binsQ)
-            cosines = self.computing_cosine(binsQ, self.bins)
+            cosines = self.computing_cosine(binsQ, self.bins, relevantDocsIDs)
            
 
         cosines = dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True))
-        dict_items = cosines.items()
-        chosen = list(dict_items)[:10] # get 10 best scoring
+        cosines_items = cosines.items()
+        top10cosines = list(cosines_items)[:10] # get 10 best scoring
 
-        finalList = []
-        for tuple in chosen: #convert to a list
-            finalList.append(tuple[0])
+        chosenDocuments = []
+        for tuple in top10cosines: #convert to a list of only ids
+            chosenDocuments.append(tuple[0])
             
-
-        return finalList
+        return chosenDocuments
 
 
