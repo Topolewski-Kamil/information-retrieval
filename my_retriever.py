@@ -93,6 +93,8 @@ class Retrieve:
                 tf[term] = 1
 
         return tf
+        
+        # comment
 
     # Compute query tfidf
     def query_tfidf(self, query):
