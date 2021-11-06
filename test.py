@@ -1,11 +1,7 @@
-import numpy as np
-x = np.array([])
+set1 = {1: {'abc': 3}}
 
-x = np.append(x,112.2)
-x = np.append(x,30.9)
-x = np.append(x,23.6)
-x = np.append(x,452.2)
+for doc in set1:
+  for term in set1[doc]:
+    set1[doc][term] = 4
 
-print(x)
-
-print(np.linalg.norm(x))
+print(set1)

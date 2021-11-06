@@ -9,14 +9,14 @@ class Retrieve:
         self.index = index
         self.term_weighting = term_weighting
         self.num_docs = self.number_of_docs()
-        self.biggest_tf = 0
         self.smoothing_term = 0.4
 
         if (term_weighting == 'tfidf'):
             self.weights = self.docs_tfidfs()
         elif (term_weighting == 'tf'):
-            self.docs_tfs()
-            self.weights = self.maximumTfNorm()
+            tf = self.docs_tfs()
+            max_tf = self.max_term_frequency(tf)
+            self.weights = self.docs_max_tfs(tf, max_tf)
         else:
             self.weights = self.docs_binary()
         self.vectors = self.docs_vectors_len()
@@ -47,21 +47,24 @@ class Retrieve:
                     tfDict[doc] = {}
                 tf = self.index[term][doc]
                 tfDict[doc][term] =  tf
-
-                if tf > self.biggest_tf:
-                    self.biggest_tf = tf
-                
         return tfDict
 
-    def maximumTfNorm(self):
-        tfNormDict = {} # tf dict
-        for term in self.index:
-            for doc in self.index[term]:
-                if doc not in tfNormDict:
-                    tfNormDict[doc] = {}
-                tfNormDict[doc][term] = self.smoothing_term + (1- self.smoothing_term) * (self.index[term][doc]/self.biggest_tf)
-        return tfNormDict
+    # Compute max term frequency for each document
+    def max_term_frequency(self, tf):
+        tf_max = {}
+        for doc in tf:
+            tf[doc] = dict(sorted(tf[doc].items(), key=lambda item: item[1], reverse=True)) # descending order
+            highestTf = list(tf[doc].values())[0]
+            tf_max[doc] = highestTf
+        return tf_max
 
+    # Compute documents term frequencies for each term
+    def docs_max_tfs(self, tf, tf_max):
+        for doc in tf:
+            for term in tf[doc]:
+                tf[doc][term] = self.smoothing_term + ((1 - self.smoothing_term) * (tf[doc][term]/tf_max[doc]))
+        return tf
+    
     # Compute documents tfidfs for each term
     def docs_tfidfs(self):
         tfidfsDict = {} # tf dict
@@ -115,11 +118,6 @@ class Retrieve:
                 tf[term] = 1
         return tf
 
-    def logTfweight(self, tf):
-        for term in tf:
-            tf[term] = self.smoothing_term + (1- self.smoothing_term) * (tf[term]/self.biggest_tf)
-        return tf
-
     # Compute query tfidf
     def query_tfidf(self, query):
         query_terms = self.query_tf(query)
@@ -156,13 +154,12 @@ class Retrieve:
     # represented as a list of preprocessed terms). Returns list 
     # of doc ids for relevant docs (in rank order).
     def for_query(self, query):
-
         relevantDocsIDs = self.relevant_docs_tf(query)
 
         if self.term_weighting == 'tfidf':
             weightsQ = self.query_tfidf(query) # compute query tfidf weights
         elif self.term_weighting == 'tf':
-            weightsQ = self.logTfweight(self.query_tf(query)) # compute query term freq weights
+            weightsQ = self.query_tf(query) # compute query term freq weights
         else:
             weightsQ = self.query_binary(query) # compute query binary weights
         
