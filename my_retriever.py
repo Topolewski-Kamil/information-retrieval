@@ -27,49 +27,48 @@ class Retrieve:
 
     # Compute documents binary weighting for each term
     def docs_binary(self):
-        binDict = {} # tf dict
+        bin_dict = {} # tf dict
         for term in self.index:
             for doc in self.index[term]:
-                if doc not in binDict:
-                    binDict[doc] = {}
-                binDict[doc][term] = 1
-        return binDict
+                if doc not in bin_dict:
+                    bin_dict[doc] = {}
+                bin_dict[doc][term] = 1
+        return bin_dict
 
     # Compute documents term frequencies for each term
     def docs_tfs(self):
-        tfDict = {} # tf dict
+        tf_dict = {} # tf dict
         for term in self.index:
             for doc in self.index[term]:
-                if doc not in tfDict:
-                    tfDict[doc] = {}
+                if doc not in tf_dict:
+                    tf_dict[doc] = {}
                 if self.index[term][doc] > 0:
-                    tfDict[doc][term] = 1 + (math.log10(self.index[term][doc]))
+                    tf_dict[doc][term] = 1 + (math.log10(self.index[term][doc]))
                 else: 
-                    tfDict[doc][term] = 0
-        return tfDict
+                    tf_dict[doc][term] = 0
+        return tf_dict
 
     # Compute documents tfidfs for each term
     def docs_tfidfs(self):
-        tfidfsDict = {} # tf dict
+        tfidfs_dict = {} # tf dict
         for term in self.index:
             count = len(self.index.get(term))
             idf = (math.log10(self.num_docs / count))
             for doc in self.index[term]:
-                if doc not in tfidfsDict:
-                    tfidfsDict[doc] = {}
+                if doc not in tfidfs_dict:
+                    tfidfs_dict[doc] = {}
                 tf = self.index[term][doc]
-                tfidfsDict[doc][term] = tf * idf
-        return tfidfsDict
+                tfidfs_dict[doc][term] = tf * idf
+        return tfidfs_dict
     
     # Compute documents length of vectors
     def docs_vectors_len(self):
         vectors = {}
         for doc in self.weights:
-            wordVec = np.array([])
+            word_vec = np.array([])
             for term in self.weights[doc]:
-                wordVec = np.append(wordVec,self.weights[doc][term])              
-            vecLen = np.linalg.norm(wordVec)
-            vectors[doc] = vecLen
+                word_vec = np.append(word_vec,self.weights[doc][term])              
+            vectors[doc] = np.linalg.norm(word_vec)
         return vectors
         
     # Find all documents with at least one word match in a query
@@ -77,10 +76,10 @@ class Retrieve:
     def relevant_docs_tf(self, query):
         documents = set() # relvant docs        
         for word in query:
-            docIDs = self.index.get(word) # ids of all docs containg the word
-            if docIDs != None:
-                for docID in docIDs:
-                    documents.add(docID)        
+            doc_ids = self.index.get(word) # ids of all docs containg the word
+            if doc_ids != None:
+                for doc_id in doc_ids:
+                    documents.add(doc_id)        
         return documents
 
     # Compute query term frequency
@@ -101,7 +100,7 @@ class Retrieve:
                 tf[term] = 1
         return tf
 
-    def logTfweight(self, tf):
+    def log_tf_weight(self, tf):
         for term in tf:
             if tf[term] > 0:
                 tf[term] = 1 + (math.log10(tf[term]))
@@ -120,22 +119,22 @@ class Retrieve:
 
     # Compute query vector length
     def query_vector(self, tfdif):
-        wordVec = np.array([])
+        word_vec = np.array([])
         for term in tfdif:
-            wordVec = np.append(wordVec, tfdif[term])              
-        vecLen = np.linalg.norm(wordVec)
-        return vecLen
+            word_vec = np.append(word_vec, tfdif[term])              
+        vec_len = np.linalg.norm(word_vec)
+        return vec_len
 
     # Compute cosine similarity
-    def computing_cosine(self, tfidfQ, tfidfD, relevantDocs):
+    def computing_cosine(self, tfidf_query, tfidf_docs, relevant_docs):
         cosines = {}
-        for doc in tfidfD:
-            if doc in relevantDocs:
+        for doc in tfidf_docs:
+            if doc in relevant_docs:
                 cosines[doc] = {}
                 product = 0
-                for term in tfidfQ:
-                    if term in tfidfD[doc]:
-                        product += tfidfQ[term] * tfidfD[doc][term]
+                for term in tfidf_query:
+                    if term in tfidf_docs[doc]:
+                        product += tfidf_query[term] * tfidf_docs[doc][term]
                 cosines[doc] = product / self.vectors[doc]
         return cosines
 
@@ -143,22 +142,22 @@ class Retrieve:
     # represented as a list of preprocessed terms). Returns list 
     # of doc ids for relevant docs (in rank order).
     def for_query(self, query):
-        relevantDocsIDs = self.relevant_docs_tf(query)
+        relevant_docs_ids = self.relevant_docs_tf(query)
 
         if self.term_weighting == 'tfidf':
-            weightsQ = self.query_tfidf(query) # compute query tfidf weights
+            weights_query = self.query_tfidf(query) # compute query tfidf weights
         elif self.term_weighting == 'tf':
-            weightsQ = self.query_tf(query) # compute query term freq weights
+            weights_query = self.query_tf(query) # compute query term freq weights
         else:
-            weightsQ = self.query_binary(query) # compute query binary weights
+            weights_query = self.query_binary(query) # compute query binary weights
         
-        cosines = self.computing_cosine(weightsQ, self.weights, relevantDocsIDs)
+        cosines = self.computing_cosine(weights_query, self.weights, relevant_docs_ids)
         cosines = dict(sorted(cosines.items(), key=lambda item: item[1], reverse=True)) # descending order
         cosines_items = cosines.items()
-        top10cosines = list(cosines_items)[:10] # get 10 best scoring
+        top_cosines = list(cosines_items)[:10] # get 10 best scoring
 
-        chosenDocuments = []
-        for tuple in top10cosines: #convert to a list of only ids
-            chosenDocuments.append(tuple[0])
+        chosen_docs = []
+        for tuple in top_cosines: #convert to a list of only ids
+            chosen_docs.append(tuple[0])
             
-        return chosenDocuments
+        return chosen_docs
