@@ -9,6 +9,7 @@ class Retrieve:
         self.index = index
         self.term_weighting = term_weighting
         self.num_docs = self.number_of_docs()
+        self.SMOOTING_TERM = 0.4
 
         if (term_weighting == 'tfidf'):
             self.weights = self.docs_tfidfs()
@@ -25,6 +26,17 @@ class Retrieve:
             self.doc_ids.update(self.index[term])
         return len(self.doc_ids)
 
+    # Find all documents with at least one word match in a query
+    # and construct tf weight dict
+    def relevant_docs_tf(self, query):
+        documents = set() # relvant docs        
+        for word in query:
+            doc_ids = self.index.get(word) # ids of all docs containg the word
+            if doc_ids != None:
+                for doc_id in doc_ids:
+                    documents.add(doc_id)        
+        return documents
+
     # Compute documents binary weighting for each term
     def docs_binary(self):
         bin_dict = {} # tf dict
@@ -35,7 +47,23 @@ class Retrieve:
                 bin_dict[doc][term] = 1
         return bin_dict
 
-    # Compute documents term frequencies for each term
+    # Find max term occurances for each document
+    def max_term_frequency(self, tf):
+        tf_max = {}
+        for doc in tf:
+            tf[doc] = dict(sorted(tf[doc].items(), key=lambda item: item[1], reverse=True)) # descending order
+            highestTf = list(tf[doc].values())[0]
+            tf_max[doc] = highestTf
+        return tf_max
+
+    # Compute documents term frequencies for each document
+    def docs_max_tfs(self, tf, tf_max):
+        for doc in tf:
+            for term in tf[doc]:
+                tf[doc][term] = self.smoothing_term + ((1 - self.smoothing_term) * (tf[doc][term]/tf_max[doc]))
+        return tf
+
+    # Compute documents log term frequencies for each term
     def docs_tfs(self):
         tf_dict = {} # tf dict
         for term in self.index:
@@ -48,7 +76,7 @@ class Retrieve:
                     tf_dict[doc][term] = 0
         return tf_dict
 
-    # Compute documents tfidfs for each term
+    # Compute documents tfidfs for each term 
     def docs_tfidfs(self):
         tfidfs_dict = {} # tf dict
         for term in self.index:
@@ -70,19 +98,8 @@ class Retrieve:
                 word_vec = np.append(word_vec,self.weights[doc][term])              
             vectors[doc] = np.linalg.norm(word_vec)
         return vectors
-        
-    # Find all documents with at least one word match in a query
-    # and construct tf weight dict
-    def relevant_docs_tf(self, query):
-        documents = set() # relvant docs        
-        for word in query:
-            doc_ids = self.index.get(word) # ids of all docs containg the word
-            if doc_ids != None:
-                for doc_id in doc_ids:
-                    documents.add(doc_id)        
-        return documents
 
-    # Compute query term frequency
+    # Compute query binary term frequency
     def query_binary(self, query):
         tf = {}
         for term in query:
@@ -100,12 +117,6 @@ class Retrieve:
                 tf[term] = 1
         return tf
 
-    def log_tf_weight(self, tf):
-        for term in tf:
-            if tf[term] > 0:
-                tf[term] = 1 + (math.log10(tf[term]))
-        return tf
-
     # Compute query tfidf
     def query_tfidf(self, query):
         query_terms = self.query_tf(query)
@@ -117,7 +128,7 @@ class Retrieve:
                 tfidf[term] = idf * query_terms[term]
         return tfidf  
 
-    # Compute query vector length
+    # Compute query vector length (not neccessary in this assignment)
     def query_vector(self, tfdif):
         word_vec = np.array([])
         for term in tfdif:

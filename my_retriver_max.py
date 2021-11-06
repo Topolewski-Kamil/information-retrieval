@@ -49,7 +49,7 @@ class Retrieve:
                 tfDict[doc][term] =  tf
         return tfDict
 
-    # Compute max term frequency for each document
+    # Find max term occurances for each document
     def max_term_frequency(self, tf):
         tf_max = {}
         for doc in tf:
@@ -58,7 +58,7 @@ class Retrieve:
             tf_max[doc] = highestTf
         return tf_max
 
-    # Compute documents term frequencies for each term
+    # Compute documents term frequencies for each document
     def docs_max_tfs(self, tf, tf_max):
         for doc in tf:
             for term in tf[doc]:
