@@ -60,7 +60,7 @@ class Retrieve:
     def docs_max_tfs(self, tf, tf_max):
         for doc in tf:
             for term in tf[doc]:
-                tf[doc][term] = self.smoothing_term + ((1 - self.smoothing_term) * (tf[doc][term]/tf_max[doc]))
+                tf[doc][term] = self.SMOOTING_TERM + ((1 - self.SMOOTING_TERM) * (tf[doc][term]/tf_max[doc]))
         return tf
 
     # Compute documents log term frequencies for each term
